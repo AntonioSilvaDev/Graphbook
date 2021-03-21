@@ -1,4 +1,7 @@
 import logger from '../../helpers/logger';
+import Sequelize from 'sequelize';
+
+const Op = Sequelize.Op;
 
 // cannot use arrow function syntax here since it would automatically take a scope,
 // but we want the call function to take over here
@@ -21,6 +24,54 @@ export default function resolver() {
             });
           });
         });
+      },
+      updatePost(root, { post, postId }, context) {
+        return Post.update(
+          {
+            ...post,
+          },
+          {
+            where: {
+              id: postId,
+            },
+          }
+        ).then((rows) => {
+          if (rows[0] === 1) {
+            logger.log({
+              level: 'info',
+              message: 'Post ' + postId + ' was updated',
+            });
+            return Post.findByPk(postId);
+          }
+        });
+      },
+      deletePost(root, { postId }, context) {
+        return Post.destroy({
+          where: {
+            id: postId,
+          },
+        }).then(
+          (rows) => {
+            if (rows === 1) {
+              logger.log({
+                level: 'info',
+                message: 'Post ' + postId + ' was deleted',
+              });
+              return {
+                success: true,
+              };
+            }
+            return {
+              success: false,
+            };
+          },
+          (error) => {
+            logger.log({
+              level: 'error',
+              message: error.message,
+            });
+          }
+        );
       },
       addChat(root, { chat }, context) {
         logger.log({ level: 'info', message: 'Chat was created' });
@@ -80,6 +131,26 @@ export default function resolver() {
       posts(root, args, context) {
         return Post.findAll({ order: [['createdAt', 'desc']] });
       },
+      postsFeed(root, { page, limit }, context) {
+        let skip = 0;
+
+        if (page && limit) {
+          skip = page * limit;
+        }
+
+        const query = {
+          order: [['createdAt', 'DESC']],
+          offset: skip,
+        };
+
+        if (limit) {
+          query.limit = limit;
+        }
+
+        return {
+          posts: Post.findAll(query),
+        };
+      },
       chats(root, args, context) {
         return User.findAll().then((users) => {
           if (!users.length) {
@@ -114,6 +185,32 @@ export default function resolver() {
             },
           ],
         });
+      },
+      usersSearch(root, { page, limit, text }, context) {
+        if (text.length < 3) {
+          return {
+            users: [],
+          };
+        }
+        var skip = 0;
+        if (page & limit) {
+          skip = page * limit;
+        }
+        const query = {
+          order: [['createdAt', 'DESC']],
+          offset: skip,
+        };
+        if (limit) {
+          query.limit = limit;
+        }
+        query.where = {
+          username: {
+            [Op.like]: '%' + text + '%',
+          },
+        };
+        return {
+          users: User.findAll(query),
+        };
       },
     },
   };

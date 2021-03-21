@@ -6,6 +6,10 @@ const typeDefinitions = `
     user: User
   }
 
+  type PostFeed {
+    posts: [Post]
+  }
+
   input PostInput {
     text: String!
   }
@@ -18,12 +22,18 @@ const typeDefinitions = `
     posts: [Post]
     chats: [Chat]
     chat(chatId: Int): Chat
+    postsFeed(page: Int, limit: Int): PostFeed
+    usersSearch(page: Int, limit: Int, text: String!): UsersSearch
   }
 
   type User {
     id: Int,
     avatar: String,
     username: String
+  }
+
+  type UsersSearch {
+    users: [User]
   }
 
   input UserInput {
@@ -50,13 +60,28 @@ const typeDefinitions = `
     lastMessage: Message
   }
 
+  type Response {
+    success: Boolean
+  }
+
   type RootMutation {
     addPost (
       post: PostInput!
     ): Post
+
+    updatePost (
+      post: PostInput!
+      postId: Int!
+    ) : Post
+
+    deletePost (
+      postId: Int!
+    ) : Response
+
     addChat (
       chat: ChatInput!
     ): Chat
+
     addMessage (
       message: MessageInput!
     ): Message
