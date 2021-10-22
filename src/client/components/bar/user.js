@@ -1,15 +1,13 @@
-import React, {Component} from 'react';
+import React from 'react';
 
-export default class UserBar extends Component {
-  render(){
-    const {user} = this.props;
-    if !user return null;
+export default function UserBar({ user }) {
+  if (!user) return null;
+  const { avatar, username } = user;
 
-    return(
-      <div className="user">
-        <img src={user.avatar} alt="User Photo" />
-        <span>{user.username}</span>
-      </div>
-    )
-  }
+  return (
+    <div className="user">
+      <img src={avatar} alt="User" />
+      <span>{username}</span>
+    </div>
+  );
 }

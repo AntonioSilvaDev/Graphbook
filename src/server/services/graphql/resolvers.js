@@ -1,7 +1,12 @@
-import logger from '../../helpers/logger';
 import Sequelize from 'sequelize';
+import bcrypt from 'bcrypt';
+import JWT from 'jsonwebtoken';
+import logger from '../../helpers/logger';
 
-const Op = Sequelize.Op;
+require('dotenv').config();
+
+const jwtSecret = process.env.JWT_SECRET;
+const { Op } = Sequelize;
 
 // cannot use arrow function syntax here since it would automatically take a scope,
 // but we want the call function to take over here
@@ -96,6 +101,61 @@ export default function resolver() {
               return newMessage;
             });
           });
+        });
+      },
+      login(root, { email, password }, context) {
+        logger.log({ level: 'info', message: 'User logging in' });
+        console.log(email);
+        console.log(password);
+        console.log('here is the secret', jwtSecret);
+        return User.findAll({
+          where: {
+            email,
+          },
+          raw: true,
+        }).then(async (users) => {
+          if (users.length === 1) {
+            const user = users[0];
+            const passwordValid = await bcrypt.compare(password, user.password);
+            if (!passwordValid) {
+              throw new Error('Password does not match');
+            }
+            const token = JWT.sign({ email, id: user.id }, jwtSecret, {
+              expiresIn: '1d',
+            });
+
+            return {
+              token,
+            };
+          }
+          throw new Error('User not found');
+        });
+      },
+      signup(root, { username, email, password }, context) {
+        return User.findAll({
+          where: {
+            [Op.or]: [{ email }, { username }],
+          },
+          raw: true,
+        }).then(async (users) => {
+          if (users.length) {
+            console.log(users);
+            throw new Error('User already exists!');
+          } else {
+            return bcrypt.hash(password, 10).then((hash) => {
+              return User.create({
+                email,
+                password: hash,
+                username,
+                activated: 1,
+              }).then((newUser) => {
+                const token = JWT.sign({ email, id: newUser.id }, jwtSecret, { expiresIn: '1d' });
+                return {
+                  token,
+                };
+              });
+            });
+          }
         });
       },
     },
@@ -205,7 +265,7 @@ export default function resolver() {
         }
         query.where = {
           username: {
-            [Op.like]: '%' + text + '%',
+            [Op.like]: `%${text}%`,
           },
         };
         return {

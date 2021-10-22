@@ -38,6 +38,7 @@ export default class SearchList extends Component {
     const { users } = this.props;
     const { showList } = this.state;
 
+    console.log(this.props);
     return (
       showList && (
         <div className="result">
